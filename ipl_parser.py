@@ -5,12 +5,15 @@ from bs4 import BeautifulSoup
 
 
 class IPLParser:
-    def __init__(self, input_filepath, output_filepath, venue):
+    def __init__(self, input_filepath, output_filepath, venue,match_number):
         self._input_filepath = input_filepath
         self._output_filepath = output_filepath
         self._venue = venue
+        self._match_number = match_number
         self._file1 = self._get_File(flag=1)
         self._file2 = self._get_File(flag=0)
+        self._team1 = self._extract_team_name(self._file1)
+        self._team2 = self._extract_team_name(self._file2)
 
         # Define Data
         self._pattern_span = r'<span class="ds-text-tight-s ds-font-regular ds-mb-1 lg:ds-mb-0 lg:ds-mr-3 ds-block ds-text-center ds-text-typo-mid1">(.*?)<\/span>'
@@ -47,21 +50,21 @@ class IPLParser:
             soup = BeautifulSoup(f, 'html.parser')
         return soup
 
-    def _includeInng(self, data, innings, venue):
+    def _includeInng(self, data, innings, venue,team,match_number):
         if innings == 1:
-            return data.assign(innings=innings, venue=venue)
+            return data.assign(innings=innings, venue=venue, team=team, match_number=match_number)
         else:
-            return data.assign(innings=innings, venue=venue)
+            return data.assign(innings=innings, venue=venue, team=team,match_number=match_number)
 
-    def _getData(self, filename, innings, venue):
+    def _getData(self, filename, innings, venue,team,match_number):
         data = self._getDatafromHtml(self._parse_html(filename))
-        return self._includeInng(data, innings, venue)
+        return self._includeInng(data, innings, venue,team,match_number)
 
     def getMatchData(self):
         df = pd.concat(
             [
-                self._getData(self._file1, 1, self._venue),
-                self._getData(self._file2, 2, self._venue)
+                self._getData(self._file1, 1, self._venue,self._team1,self._match_number),
+                self._getData(self._file2, 2, self._venue,self._team2,self._match_number)
             ],
             ignore_index=True
         )
@@ -76,4 +79,10 @@ class IPLParser:
 
     def writeDataToFile(self, filename):
         os.chdir(self._input_filepath)
-        self.getMatchData().to_csv(os.path.join(self._output_filepath, filename), index=False)
+        self.getMatchData().to_csv(os.path.join(self._output_filepath, filename), index=False,)
+
+    def _extract_team_name(self,input_string):
+        words = input_string.split('_')
+        team_name = words[-1].split('.')[0]
+        return team_name
+
